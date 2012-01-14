@@ -1,1 +1,5 @@
 KrailOS is a bot that is designed to replace the almighty krailo
+
+To run it, install supybot-2.7 and run with it /path/to/supybot krailOS.conf
+
+All the bot logic is in plugins/KrailOS/plugin.py
