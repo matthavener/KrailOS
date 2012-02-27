@@ -41,6 +41,7 @@ import time
 
 
 COOL_DOWN_SECONDS = 60*15
+SS_DOWNLOAD_SECONDS = 60*5
 
 class KrailOS(callbacks.Plugin):
 
@@ -48,30 +49,46 @@ class KrailOS(callbacks.Plugin):
     This should describe *how* to use this plugin."""
 
     def __init__(self, irc):
-	self.__parent = super(KrailOS, self)
+        self.__parent = super(KrailOS, self)
         self.__parent.__init__(irc)
 
-	self.lastSent = time.time() + COOL_DOWN_SECONDS
+        self.lastSent = time.time() - COOL_DOWN_SECONDS
+        self.lastPull = time.time() - SS_DOWNLOAD_SECONDS
 
     def doPrivmsg(self, irc, msg):
-    	curTime = time.time()
-	if (self.lastSent + COOL_DOWN_SECONDS) > curTime:
-	    return # skip, we're cooling down
+        __dir__ = os.path.dirname(os.path.abspath(__file__))
+        filepath = os.path.join(__dir__, 'opinions.csv')
+
+        curTime = time.time()
+        channel = msg.args[0]
+        said = ircmsgs.prettyPrint(msg, showNick=False)
+        nick = msg.nick
 
         if irc.isChannel(msg.args[0]):
-            channel = msg.args[0]
-            said = ircmsgs.prettyPrint(msg, showNick=False)
-            nick = msg.nick
+            if said.find("I CALL UPON THE POWER OF THE SPREADSHEET") != -1:
+                if (self.lastPull + SS_DOWNLOAD_SECONDS) < curTime:
+                    irc.reply("loading hacking tools...")
+                    os.system("cd " + __dir__ + "; ./get_new_opinions.sh")
+                    irc.reply("hacking tools loaded")
+                    self.lastPull = time.time()
+                    self.lastSent = time.time() - COOL_DOWN_SECONDS # allow test
+                else:
+                    print("ignored %1, %2 minutes remain" % 
+                        (said, 
+                        (curTime - (self.lastPull + SS_DOWNLOAD_SECONDS)/60)))
 
-            __dir__ = os.path.dirname(os.path.abspath(__file__))
-            filepath = os.path.join(__dir__, 'opinions.csv')
-
+        if irc.isChannel(msg.args[0]):
             opinions = csv.reader(open(filepath, 'rb'))
             for row in opinions:
                 # match beginning of string/whitespace word end of string/whitespace
                 if re.search('(\(|\s|^)' + row[0].lower() + '(\s|\)|\.|\?|\!|$)', said.lower()) is not None:
-                    irc.reply(row[0] + "? " + row[1] + ". " + ','.join(row[2:]))
-		    self.lastSent = time.time()
+                    if (self.lastSent + COOL_DOWN_SECONDS) < curTime:
+                        irc.reply(row[0] + "? " + row[1] + ". " + ','.join(row[2:]))
+                        self.lastSent = time.time()
+                    else:
+                        print("ignored %1, %2 minutes remain" % 
+                            (said, 
+                            (curTime - (self.lastSent + COOL_DOWN_SECONDS)/60)))
 
 Class = KrailOS
 
