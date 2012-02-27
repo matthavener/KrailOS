@@ -73,9 +73,9 @@ class KrailOS(callbacks.Plugin):
                     self.lastPull = time.time()
                     self.lastSent = time.time() - COOL_DOWN_SECONDS # allow test
                 else:
-                    print("ignored %1, %2 minutes remain" % 
+                    print("ignored %s, %d minutes remain" % 
                         (said, 
-                        (curTime - (self.lastPull + SS_DOWNLOAD_SECONDS)/60)))
+                        ((self.lastPull + SS_DOWNLOAD_SECONDS) - curTime)/60))
 
         if irc.isChannel(msg.args[0]):
             opinions = csv.reader(open(filepath, 'rb'))
@@ -86,9 +86,9 @@ class KrailOS(callbacks.Plugin):
                         irc.reply(row[0] + "? " + row[1] + ". " + ','.join(row[2:]))
                         self.lastSent = time.time()
                     else:
-                        print("ignored %1, %2 minutes remain" % 
+                        print("ignored %s, %d minutes remain" % 
                             (said, 
-                            (curTime - (self.lastSent + COOL_DOWN_SECONDS)/60)))
+                            ((self.lastSent + COOL_DOWN_SECONDS) - curTime)/60))
 
 Class = KrailOS
 
