@@ -1,1 +1,5 @@
-.pyc
+*.pyc
+logs/*
+plugins/KrailOS/opinions.csv
+*.conf.bak
+

@@ -37,15 +37,27 @@ import supybot.ircmsgs as ircmsgs
 import csv
 import os
 import re
+import time
 
 
+COOL_DOWN_SECONDS = 60*15
 
 class KrailOS(callbacks.Plugin):
 
     """Add the help for "@plugin help KrailOS" here
     This should describe *how* to use this plugin."""
 
+    def __init__(self, irc):
+	self.__parent = super(KrailOS, self)
+        self.__parent.__init__(irc)
+
+	self.lastSent = time.time() + COOL_DOWN_SECONDS
+
     def doPrivmsg(self, irc, msg):
+    	curTime = time.time()
+	if (self.lastSent + COOL_DOWN_SECONDS) > curTime:
+	    return # skip, we're cooling down
+
         if irc.isChannel(msg.args[0]):
             channel = msg.args[0]
             said = ircmsgs.prettyPrint(msg, showNick=False)
@@ -57,8 +69,9 @@ class KrailOS(callbacks.Plugin):
             opinions = csv.reader(open(filepath, 'rb'))
             for row in opinions:
                 # match beginning of string/whitespace word end of string/whitespace
-                if re.search('(\W|^)' + row[0].lower() + '(\W|$)', said.lower()) is not None:
+                if re.search('(\(|\s|^)' + row[0].lower() + '(\s|\)|\.|\?|\!|$)', said.lower()) is not None:
                     irc.reply(row[0] + "? " + row[1] + ". " + ','.join(row[2:]))
+		    self.lastSent = time.time()
 
 Class = KrailOS
 
