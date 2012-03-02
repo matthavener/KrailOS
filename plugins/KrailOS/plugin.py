@@ -51,7 +51,14 @@ class KrailOS(callbacks.Plugin):
     def load_opinions(self):
         __dir__ = os.path.dirname(os.path.abspath(__file__))
         filepath = os.path.join(__dir__, 'opinions.csv')
-        self.opinions = csv.reader(open(filepath, 'rb'))
+        # build a list of pairs of regex and response for match
+        with open(filepath, 'rb') as f:
+            self.opinions = []
+            for row in csv.reader(f):
+                self.opinions.append(
+                        (re.compile('(\(|\s|^)(' + row[0] + ')(\s|\)|\.|\?|\!|$)', re.IGNORECASE), 
+                         "? " + row[1] + ". " + ','.join(row[2:])))
+
 
     def __init__(self, irc):
         self.__parent = super(KrailOS, self)
@@ -72,14 +79,16 @@ class KrailOS(callbacks.Plugin):
         said = ircmsgs.prettyPrint(msg, showNick=False)
         nick = msg.nick
 
+        print("Checking %s %s: %s at time %d" % (channel, nick, said, curTime));
+
         if said.find("I CALL UPON THE POWER OF THE SPREADSHEET") != -1:
             if (self.lastPull + SS_DOWNLOAD_SECONDS) < curTime:
                 irc.reply("loading hacking tools...")
                 os.system("cd " + __dir__ + "; ./get_new_opinions.sh")
-                irc.reply("hacking tools loaded")
+                irc.reply("hacking tools loaded, %d hacks total" % (len(self.opinions),))
+                self.load_opinions()
                 self.lastPull = time.time()
                 self.lastSent = time.time() - COOL_DOWN_SECONDS # allow test
-                self.load_opinions()
             else:
                 print("ignored %s, %d minutes remain" % 
                     (said, 
@@ -87,12 +96,12 @@ class KrailOS(callbacks.Plugin):
             return
 
         didReply = False
-        for row in self.opinions:
+        for (reg, res) in self.opinions:
             # match beginning of string/whitespace word end of string/whitespace
-            m = re.search('(\(|\s|^)(' + row[0].lower() + ')(\s|\)|\.|\?|\!|$)', said.lower())
+            m = reg.search(said)
             if m is not None:
                 if (self.lastSent + COOL_DOWN_SECONDS) < curTime:
-                    irc.reply(m.group(2) + "? " + row[1] + ". " + ','.join(row[2:]))
+                    irc.reply(m.group(2) + res)
                     didReply = True
                 else:
                     print("ignored %s, %d minutes remain" % 
